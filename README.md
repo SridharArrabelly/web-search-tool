@@ -10,19 +10,33 @@ The samples are oriented around grounding answers in South African Revenue Servi
 
 ## Repository layout
 
+```
+web-search-tool/
+├── README.md
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── .gitignore
+└── samples/
+    ├── agent_framework/
+    │   ├── bing.py            # Agent Framework + Foundry WebSearchTool (Bing)
+    │   └── bing_redis.py      # Same, with Redis response caching
+    ├── foundry_sdk/
+    │   ├── bing.py            # Foundry agent using Bing Web Search grounding
+    │   └── bing_custom.py     # Foundry agent using Bing Custom Search grounding
+    └── openai/
+        └── responses_web_search.py  # OpenAI Responses API + web_search tool
+```
+
 | Path | Description |
 | --- | --- |
-| [websearch-oai.py](websearch-oai.py) | Calls OpenAI Responses API directly with `web_search` tool, restricted to `www.sars.gov.za` via `allowed_domains`. Prints input/output token usage. |
-| [af-foundryagent.py](af-foundryagent.py) | Microsoft Agent Framework sample backed by a Foundry agent. |
-| [agent-framework/af-websearchtool-bing.py](agent-framework/af-websearchtool-bing.py) | Agent Framework + Foundry `WebSearchTool` (Bing Web Search). |
-| [agent-framework/af-websearchtool-bing-redis.py](agent-framework/af-websearchtool-bing-redis.py) | Same as above, with Redis-based response caching. |
-| [agent-framework/redis_viewer.py](agent-framework/redis_viewer.py) | Helper to inspect the Redis cache. |
-| [bing-custom-preview/bingcustomsearch-tool-preview.py](bing-custom-preview/bingcustomsearch-tool-preview.py) | Preview of the Bing Custom Search grounding tool (connection name lookup). |
-| [web-search-tool/websearchtool-bing.py](web-search-tool/websearchtool-bing.py) | Foundry agent using Bing Web Search grounding. |
-| [web-search-tool/websearchtool-bingcustom.py](web-search-tool/websearchtool-bingcustom.py) | Foundry agent using Bing Custom Search grounding (ARM connection ID). |
-| [web-search-tool/websearchtool-bingcustom-instructions.py](web-search-tool/websearchtool-bingcustom-instructions.py) | Same as above, with richer system instructions. |
+| [samples/agent_framework/bing.py](samples/agent_framework/bing.py) | Agent Framework agent backed by the Foundry `WebSearchTool` (Bing Web Search). |
+| [samples/agent_framework/bing_redis.py](samples/agent_framework/bing_redis.py) | Same as above, with Redis-based response caching. |
+| [samples/foundry_sdk/bing.py](samples/foundry_sdk/bing.py) | Foundry agent using Bing Web Search grounding. |
+| [samples/foundry_sdk/bing_custom.py](samples/foundry_sdk/bing_custom.py) | Foundry agent using Bing Custom Search grounding (ARM connection ID). |
+| [samples/openai/responses_web_search.py](samples/openai/responses_web_search.py) | Calls OpenAI Responses API directly with the `web_search` tool, restricted via `allowed_domains`. Prints token usage. |
 | [pyproject.toml](pyproject.toml) | Project dependencies (managed with [uv](https://docs.astral.sh/uv/)). |
-| [.env](.env) | Local configuration (not committed). |
+| [.env.example](.env.example) | Template for local configuration; copy to `.env` (gitignored). |
 
 ## Prerequisites
 
@@ -32,7 +46,7 @@ The samples are oriented around grounding answers in South African Revenue Servi
 - An **Azure AI Foundry** project with:
   - A deployed chat model (e.g. `gpt-5.1`)
   - A **Grounding with Bing Search** connection, and/or a **Grounding with Bing Custom Search** connection + instance
-- An **OpenAI API key** (only for [websearch-oai.py](websearch-oai.py))
+- An **OpenAI API key** (only for [samples/openai/responses_web_search.py](samples/openai/responses_web_search.py))
 - (Optional) A reachable **Redis** instance for the cached Agent Framework sample
 
 ## Setup
@@ -73,35 +87,13 @@ Your signed-in identity needs the **Azure AI User** role (or equivalent) on the 
 
 ### 4. Configure `.env`
 
-Create a `.env` file in the repo root with the values for your Foundry project / Bing connections:
+Copy the template and fill in your values:
 
-```dotenv
-# Azure AI Foundry project endpoint
-# Format: https://<resource>.services.ai.azure.com/api/projects/<project>
-PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
-
-# Model deployment name in the Foundry project
-MODEL=gpt-5.1
-
-# Bing Custom Search — name-based (used by bingcustomsearch-tool-preview.py)
-CUSTOM_SEARCH_CONNECTION_NAME=<connection-name>
-CUSTOM_SEARCH_INSTANCE_NAME=<custom-search-instance-name>
-
-# Bing Custom Search — full ARM ID (used by websearchtool-bingcustom*.py)
-BING_CUSTOM_SEARCH_CONNECTION_ID=/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<resource>/projects/<project>/connections/<connection-name>
-BING_CUSTOM_SEARCH_INSTANCE_NAME=<custom-search-instance-name>
-
-# OpenAI direct (only for websearch-oai.py)
-OPENAI_API_KEY=sk-...
-
-# Optional: Application Insights for tracing
-APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=...;IngestionEndpoint=...
-
-# Optional: Redis (for agent-framework/af-websearchtool-bing-redis.py)
-REDIS_URL=redis://localhost:6379
+```powershell
+Copy-Item .env.example .env
 ```
 
-The connection ID and instance name come from your Foundry project's **Connected resources → Grounding with Bing Custom Search** entry.
+The connection ID and instance name come from your Foundry project''s **Connected resources → Grounding with Bing Custom Search** entry.
 
 ## Run the samples
 
@@ -110,7 +102,7 @@ Use `uv run` (no activation needed) or `python` inside the activated venv.
 ### OpenAI Responses API + web search (token-usage demo)
 
 ```powershell
-uv run python websearch-oai.py
+uv run python samples/openai/responses_web_search.py
 ```
 
 Restricts results to `www.sars.gov.za` via `tools[0].filters.allowed_domains` and prints input / output / total token counts. To target a different site, edit the `allowed_domains` list (up to 20 domains).
@@ -118,21 +110,19 @@ Restricts results to `www.sars.gov.za` via `tools[0].filters.allowed_domains` an
 ### Foundry agent — Bing Web Search
 
 ```powershell
-uv run python web-search-tool/websearchtool-bing.py
+uv run python samples/foundry_sdk/bing.py
 ```
 
 ### Foundry agent — Bing Custom Search
 
 ```powershell
-uv run python web-search-tool/websearchtool-bingcustom.py
-# or with extended instructions
-uv run python web-search-tool/websearchtool-bingcustom-instructions.py
+uv run python samples/foundry_sdk/bing_custom.py
 ```
 
 ### Agent Framework + Foundry web search
 
 ```powershell
-uv run python agent-framework/af-websearchtool-bing.py
+uv run python samples/agent_framework/bing.py
 ```
 
 ### Agent Framework with Redis caching
@@ -140,8 +130,7 @@ uv run python agent-framework/af-websearchtool-bing.py
 Start Redis (e.g. via Docker) then:
 
 ```powershell
-uv run python agent-framework/af-websearchtool-bing-redis.py
-uv run python agent-framework/redis_viewer.py   # inspect cached entries
+uv run python samples/agent_framework/bing_redis.py
 ```
 
 ## Troubleshooting
